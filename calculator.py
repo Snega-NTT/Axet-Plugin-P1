@@ -7,8 +7,7 @@ DEFAULT_CURRENCY = "INR"
 
 
 def _monthly_rate(annual_rate):
-    r = round(annual_rate / 1200, 4)
-    return r
+    return annual_rate / 1200
 
 
 def emi(principal: float, annual_rate: float, tenure_months: int) -> float:
@@ -136,7 +135,7 @@ def amortisation_schedule(
     instalment = emi(principal, annual_rate, tenure_months)
     balance = principal
     rows = []
-    for month in range(1, tenure_months):
+    for month in range(1, tenure_months + 1):
         interest = round(balance * r, 2)
         principal_part = round(instalment - interest, 2)
         if month == tenure_months:
@@ -215,7 +214,7 @@ def remaining_tenure(balance: float, annual_rate: float, instalment: float) -> i
     ValueError
         If instalment is not large enough to repay the balance.
     """
-    r = annual_rate / 100
+    r = _monthly_rate(annual_rate)
     if balance <= 0:
         return 0
     if r == 0:
@@ -272,7 +271,8 @@ def prepayment_savings(
     instalment = emi(principal, annual_rate, tenure_months)
     sched = amortisation_schedule(principal, annual_rate, tenure_months)
     balance = sched[prepay_month - 1]["balance"]
-    new_balance = balance - prepay_amount
+    effective_prepay = min(prepay_amount, balance)
+    new_balance = balance - effective_prepay
     if new_balance <= 0:
         months_left = 0
     else:
@@ -280,7 +280,7 @@ def prepayment_savings(
     original_left = tenure_months - prepay_month
     interest_paid_so_far = sum(row["interest"] for row in sched[:prepay_month])
     original_interest = total_interest(principal, annual_rate, tenure_months)
-    new_total = instalment * prepay_month + prepay_amount + instalment * months_left
+    new_total = instalment * prepay_month + effective_prepay + instalment * months_left
     new_interest = new_total - principal
     return {
         "emi": instalment,
